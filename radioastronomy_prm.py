@@ -88,6 +88,44 @@ def beams_per_pix(head):
     return dpix**2 / calculate_beam_area_arcsec(head)
 
 
+def jybeam_to_K(freq_GHz, bmaj_arcsec, bmin_arcsec):
+    """
+    Calcula el factor de conversión de Jy/beam a Kelvin.
+
+    Parámetros
+    ----------
+    freq_GHz : float
+        Frecuencia de observación en GHz
+    bmaj_arcsec : float
+        Eje mayor del beam en arcsec
+    bmin_arcsec : float
+        Eje menor del beam en arcsec
+
+    Retorna
+    -------
+    factor : float
+        Factor de conversión [K / (Jy/beam)]
+    """
+
+    # Constantes
+    c = 2.99792458e8        # m/s
+    k = 1.380649e-23        # J/K
+    jy = 1e-26              # W/m^2/Hz
+
+    # Conversiones
+    freq = freq_GHz * 1e9
+    bmaj = np.deg2rad(bmaj_arcsec / 3600)
+    bmin = np.deg2rad(bmin_arcsec / 3600)
+
+    # Área del beam
+    omega_beam = (np.pi / (4 * np.log(2))) * bmaj * bmin
+
+    # Factor Jy/beam -> K
+    factor = (jy * c**2) / (2 * k * freq**2 * omega_beam)
+
+    return factor
+
+
 # ============================================================
 # SPECTRA
 # ============================================================
@@ -110,10 +148,14 @@ def mean_spectrum(cube, ww):
     Computes mean spectrum inside a mask.
     """
     spectrum = np.array([
-        np.nanmean(cube[i, ww[0], ww[1]])
+        np.nanmean(cube[i, ww])
         for i in range(cube.shape[0])
     ])
-    return spectrum
+    unc = np.array([
+        np.nanstd(cube[i, ww])
+        for i in range(cube.shape[0])
+    ])
+    return spectrum, unc
 
 
 def stack_spectrum(cube, ww):
